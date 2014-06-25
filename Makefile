@@ -4,6 +4,8 @@ DESTDIR ?=
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
+export PATH := $(PATH):$(CURDIR)/rustc/bin
+
 # Link flags to pull in dependencies
 BINS = cargo \
 	     cargo-build \
