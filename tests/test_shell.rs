@@ -37,6 +37,10 @@ test!(color_explicitly_disabled {
 })
 
 test!(colored_shell {
+    let term: Option<TerminfoTerminal<MemWriter>> =
+        Terminal::new(MemWriter::new());
+    if term.is_none() { return }
+
     let config = ShellConfig { color: true, verbose: true, tty: true };
     let mut buf: Vec<u8> = Vec::from_elem(100, 0 as u8);
 
