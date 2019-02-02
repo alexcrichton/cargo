@@ -81,7 +81,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 });
             }
         }
-        registry.add_sources(sources)?;
+        // registry.add_sources(sources)?;
     }
 
     let resolve = ops::resolve_with_previous(

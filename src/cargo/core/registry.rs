@@ -169,6 +169,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     pub fn add_to_yanked_whitelist(&mut self, iter: impl Iterator<Item = PackageId>) {
+        assert!(self.sources.is_empty());
         self.yanked_whitelist.extend(iter)
     }
 

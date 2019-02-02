@@ -59,9 +59,10 @@ pub fn resolve_ws_with_method<'a>(
     specs: &[PackageIdSpec],
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    if let Some(source) = source {
-        registry.add_preloaded(source);
-    }
+    drop(source);
+    // if let Some(source) = source {
+    //     registry.add_preloaded(source);
+    // }
     let mut add_patches = true;
 
     let resolve = if ws.require_optional_deps() {
