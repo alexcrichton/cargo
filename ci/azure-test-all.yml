@@ -1,0 +1,12 @@
+steps:
+  - script: sudo apt update && sudo apt install -y gcc-multilib
+    displayName: Install gcc-multilib (Linux)
+    condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
+
+  - template: azure-install-rust.yml
+  - bash: rustup target add $ALT
+    displayName: Install alternate target
+  - bash: rustup component add clippy || echo "clippy not available"
+    displayName: Try to install clippy
+  - bash: cargo test --features 'deny-warnings curl/force-system-lib-on-osx'
+    displayName: Run crate tests
