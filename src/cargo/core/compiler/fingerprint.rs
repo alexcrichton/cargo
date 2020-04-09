@@ -230,11 +230,7 @@ use super::{BuildContext, Context, FileFlavor, Unit};
 /// transitively propagate throughout the dependency graph, it only forces this
 /// one unit which is very unlikely to be what you want unless you're
 /// exclusively talking about top-level units.
-pub fn prepare_target<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-    force: bool,
-) -> CargoResult<Job> {
+pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> CargoResult<Job> {
     let _p = profile::start(format!(
         "fingerprint: {} / {}",
         unit.pkg.package_id(),
@@ -955,11 +951,7 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
 }
 
 impl DepFingerprint {
-    fn new<'a, 'cfg>(
-        cx: &mut Context<'a, 'cfg>,
-        parent: &Unit<'a>,
-        dep: &UnitDep<'a>,
-    ) -> CargoResult<DepFingerprint> {
+    fn new(cx: &mut Context<'_, '_>, parent: &Unit, dep: &UnitDep) -> CargoResult<DepFingerprint> {
         let fingerprint = calculate(cx, &dep.unit)?;
         // We need to be careful about what we hash here. We have a goal of
         // supporting renaming a project directory and not rebuilding
@@ -1025,10 +1017,7 @@ impl StaleFile {
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies.
-fn calculate<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-) -> CargoResult<Arc<Fingerprint>> {
+fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerprint>> {
     // This function is slammed quite a lot, so the result is memoized.
     if let Some(s) = cx.fingerprints.get(unit) {
         return Ok(Arc::clone(s));
@@ -1047,16 +1036,14 @@ fn calculate<'a, 'cfg>(
     fingerprint.check_filesystem(&mut cx.mtime_cache, unit.pkg.root(), &target_root)?;
 
     let fingerprint = Arc::new(fingerprint);
-    cx.fingerprints.insert(unit.clone(), Arc::clone(&fingerprint));
+    cx.fingerprints
+        .insert(unit.clone(), Arc::clone(&fingerprint));
     Ok(fingerprint)
 }
 
 /// Calculate a fingerprint for a "normal" unit, or anything that's not a build
 /// script. This is an internal helper of `calculate`, don't call directly.
-fn calculate_normal<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-) -> CargoResult<Fingerprint> {
+fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Fingerprint> {
     // Recursively calculate the fingerprint for all of our dependencies.
     //
     // Skip fingerprints of binaries because they don't actually induce a
@@ -1130,16 +1117,13 @@ fn calculate_normal<'a, 'cfg>(
 
 /// Whether or not the fingerprint should track the dependencies from the
 /// dep-info file for this unit.
-fn use_dep_info(unit: &Unit<'_>) -> bool {
+fn use_dep_info(unit: &Unit) -> bool {
     !unit.mode.is_doc()
 }
 
 /// Calculate a fingerprint for an "execute a build script" unit.  This is an
 /// internal helper of `calculate`, don't call directly.
-fn calculate_run_custom_build<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-) -> CargoResult<Fingerprint> {
+fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Fingerprint> {
     assert!(unit.mode.is_run_custom_build());
     // Using the `BuildDeps` information we'll have previously parsed and
     // inserted into `build_explicit_deps` built an initial snapshot of the
@@ -1214,9 +1198,9 @@ fn calculate_run_custom_build<'a, 'cfg>(
 /// improve please do so!
 ///
 /// FIXME(#6779) - see all the words above
-fn build_script_local_fingerprints<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
+fn build_script_local_fingerprints(
+    cx: &mut Context<'_, '_>,
+    unit: &Unit,
 ) -> (
     Box<
         dyn FnOnce(
@@ -1289,9 +1273,9 @@ fn build_script_local_fingerprints<'a, 'cfg>(
 
 /// Create a `LocalFingerprint` for an overridden build script.
 /// Returns None if it is not overridden.
-fn build_script_override_fingerprint<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
+fn build_script_override_fingerprint(
+    cx: &mut Context<'_, '_>,
+    unit: &Unit,
 ) -> Option<LocalFingerprint> {
     // Build script output is only populated at this stage when it is
     // overridden.
@@ -1364,7 +1348,7 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
 }
 
 /// Prepare for work when a package starts to build
-pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<()> {
+pub fn prepare_init(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let new1 = cx.files().fingerprint_dir(unit);
 
     // Doc tests have no output, thus no fingerprint.
@@ -1377,7 +1361,7 @@ pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Ca
 
 /// Returns the location that the dep-info file will show up at for the `unit`
 /// specified.
-pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
+pub fn dep_info_loc(cx: &mut Context<'_, '_>, unit: &Unit) -> PathBuf {
     cx.files()
         .fingerprint_dir(unit)
         .join(&format!("dep-{}", filename(cx, unit)))
@@ -1418,7 +1402,7 @@ fn compare_old_fingerprint(
     result
 }
 
-fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
+fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
     let ce = match compare {
         Ok(..) => return,
         Err(e) => e,
@@ -1533,7 +1517,7 @@ where
     None
 }
 
-fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
+fn filename(cx: &mut Context<'_, '_>, unit: &Unit) -> String {
     // file_stem includes metadata hash. Thus we have a different
     // fingerprint for every metadata hash version. This works because
     // even if the package is fresh, we'll still link the fresh target
