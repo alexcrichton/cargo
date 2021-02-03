@@ -10,12 +10,29 @@ defaults:
     shell: bash
 
 jobs:
+  rust:
+    runs-on: ubuntu-latest
+    # Defining outputs of a job allows for easier consumption and use
+    outputs:
+      ver: ${{ steps.rustver.outputs.ver }}
+    steps:
+    - id: rustver
+      run: |
+        branchName=$(echo '${{ github.ref }}' | sed 's,refs/heads/,,g')
+        if [[ $branchName == rust-* ]]; then
+          ver=$(echo $branchName | sed 's,rust-,,g')
+          echo "::set-output name=ver::$ver"
+        else
+          echo "::set-output name=ver::stable"
+        fi
+
   # Check Code style quickly by running `rustfmt` over all code
   rustfmt:
+    needs: rust
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - run: rustup update stable && rustup default stable
+    - run: rustup update ${{ needs.rust.outputs.ver }} && rustup default ${{ needs.rust.outputs.ver }}
     - run: rustup component add rustfmt
     - run: cargo fmt --all -- --check
     - run: |
@@ -84,6 +101,7 @@ jobs:
 
   build_std:
     runs-on: ubuntu-latest
+    if: "!startsWith(github.ref, 'refs/heads/rust-')"
     steps:
     - uses: actions/checkout@v2
     - run: rustup update nightly && rustup default nightly
@@ -94,6 +112,7 @@ jobs:
         CARGO_RUN_BUILD_STD_TESTS: 1
   docs:
     runs-on: ubuntu-latest
+    if: "!startsWith(github.ref, 'refs/heads/rust-')"
     steps:
     - uses: actions/checkout@v2
     - run: rustup update nightly && rustup default nightly
